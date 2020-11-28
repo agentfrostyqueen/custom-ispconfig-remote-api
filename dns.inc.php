@@ -617,7 +617,7 @@ class remoting_dns extends remoting {
 		if (!empty($client_id) && !empty($server_id)) {
 			$server_id      = $app->functions->intval($server_id);
 			$client_id      = $app->functions->intval($client_id);
-			$sql            = "SELECT id, origin FROM dns_soa d INNER JOIN sys_user s on(d.sys_groupid = s.default_group) WHERE client_id = ? AND server_id = ?";
+			$sql            = "SELECT d.id, d.ns, d.mbox, d.ttl, d.active FROM dns_soa d INNER JOIN sys_user s on(d.sys_groupid = s.default_group) WHERE client_id = ? AND server_id = ?";
 			$result         = $app->db->queryAllRecords($sql, $client_id, $server_id);
 			return          $result;
 		}

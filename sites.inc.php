@@ -841,7 +841,7 @@ class remoting_sites extends remoting {
 			$new_group[] = $app->functions->intval( $group_id);
 		}
 		$group_list = implode(',', $new_group);
-		$sql ="SELECT domain, domain_id, document_root, active FROM web_domain WHERE ( (sys_userid = $sys_userid  AND sys_perm_user LIKE '%r%') OR (sys_groupid IN ($group_list) AND sys_perm_group LIKE '%r%') OR  sys_perm_other LIKE '%r%') AND type = 'vhost'";
+		$sql ="SELECT wd.domain_id, wd.active, wd.server_id, se.server_name, wd.domain, wd.type, wd.parent_domain_id, wd.vhost_type, wd.document_root, wd.system_user, wd.system_group, wd.backup_interval FROM web_domain wd LEFT JOIN server se ON (se.server_id = wd.server_id) WHERE ( (wd.sys_userid = $sys_userid  AND wd.sys_perm_user LIKE '%r%') OR (wd.sys_groupid IN ($group_list) AND wd.sys_perm_group LIKE '%r%') OR  wd.sys_perm_other LIKE '%r%') AND wd.type = 'vhost'";
 		$result = $app->db->queryAllRecords($sql);
 		if(isset($result)) {
 			return $result;
@@ -897,7 +897,7 @@ class remoting_sites extends remoting {
 			return false;
 		}
 		$client_id = $app->functions->intval($client_id);
-		$sql = "SELECT d.database_id, d.database_name, d.database_user_id, d.database_ro_user_id, du.database_user, du.database_password FROM web_database d LEFT JOIN web_database_user du ON (du.database_user_id = d.database_user_id) INNER JOIN sys_user s on(d.sys_groupid = s.default_group) WHERE client_id = ?";
+		$sql = "SELECT wd.domain, d.database_id, d.database_name, d.database_user_id, d.database_ro_user_id, d.remote_access, d.parent_domain_id, d.active, d.remote_access, d.server_id, du.database_user, du.database_password, se.server_name FROM web_database d LEFT JOIN web_domain wd ON (wd.domain_id = d.parent_domain_id ) LEFT JOIN web_database_user du ON (du.database_user_id = d.database_user_id) LEFT JOIN server se ON (se.server_id = d.server_id) INNER JOIN sys_user s on(d.sys_groupid = s.default_group) WHERE client_id = ?";
 		$all = $app->db->queryAllRecords($sql, $client_id);
 		return $all;
 	}
@@ -1066,8 +1066,119 @@ class remoting_sites extends remoting {
 		$affected_rows = $this->deleteQuery('../sites/form/webdav_user.tform.php', $primary_id);
 		return $affected_rows;
 	}
-	
-	
+
+	/** Get all databases by user
+          * @author Frost
+          */
+         public function sites_database_user_get_all_by_user($session_id, $client_id)
+         {
+                 global $app;
+                 if(!$this->checkPerm($session_id, 'sites_database_get')) {
+                         throw new SoapFault('permission_denied', 'You do not have the permissions to access this function.');
+                         return false;
+                 }
+                 $client_id = $app->functions->intval($client_id);
+                 $sql = "SELECT d.database_user_id, d.server_id, d.database_user,se.server_name FROM web_database_user d LEFT JOIN server se ON (se.server_id = d.server_id) LEFT JOIN sys_user s on(d.sys_groupid = s.default_group) WHERE client_id = ?";
+                 $all = $app->db->queryAllRecords($sql, $client_id);
+                 return $all;
+         }
+
+	/** Get all ftp user by user
+          * @author Frost
+          */
+	public function sites_ftp_user_get_all_by_user($session_id, $client_id)
+        {
+                global $app;
+                if(!$this->checkPerm($session_id, 'sites_ftp_user_get')) {
+                        throw new SoapFault('permission_denied', 'You do not have the permissions to access this function.');
+                        return false;
+                }
+                $client_id = $app->functions->intval($client_id);
+                $sql = "SELECT f.ftp_user_id, f.sys_userid, f.sys_groupid, f.server_id, se.server_name, f.parent_domain_id, f.username, f.quota_size, f.active, f.uid, f.gid, f.dir, f.quota_files, f.ul_ratio, f.dl_ratio, f.ul_bandwidth, f.dl_bandwidth, f.expires, f.user_type, f.user_config, wd.domain FROM ftp_user f LEFT JOIN web_domain wd ON (wd.domain_id = f.parent_domain_id) LEFT JOIN server se ON (se.server_id = f.server_id) INNER JOIN sys_user s on(f.sys_groupid = s.default_group) WHERE client_id = ?";
+                $all = $app->db->queryAllRecords($sql, $client_id);
+                return $all;
+        }
+
+	/** Get all webdav user by user
+          * @author Frost
+          */
+        public function sites_webdav_user_get_all_by_user($session_id, $client_id)
+        {
+                global $app;
+                if(!$this->checkPerm($session_id, 'sites_ftp_user_get')) {
+                        throw new SoapFault('permission_denied', 'You do not have the permissions to access this function.');
+                        return false;
+                }
+                $client_id = $app->functions->intval($client_id);
+                $sql = "SELECT wdu.active, se.server_name, wd.domain, wdu.username, wdu.server_id, wdu.dir, wdu.parent_domain_id, wdu.webdav_user_id FROM webdav_user wdu LEFT JOIN server se ON (se.server_id = wdu.server_id) LEFT JOIN sys_user s on(wdu.sys_groupid = s.default_group)  LEFT JOIN web_domain wd ON (wd.domain_id = wdu.parent_domain_id) WHERE client_id = ?";
+                $all = $app->db->queryAllRecords($sql, $client_id);
+                return $all;
+        }
+
+        /** Get all protected folders by user
+          * @author Frost
+          */
+        public function sites_protected_folders_get_all_by_user($session_id, $client_id)
+        {
+                global $app;
+                if(!$this->checkPerm($session_id, 'sites_ftp_user_get')) {
+                        throw new SoapFault('permission_denied', 'You do not have the permissions to access this function.');
+                        return false;
+                }
+                $client_id = $app->functions->intval($client_id);
+                $sql = "SELECT se.server_name, wd.domain, wfu.username, wf.web_folder_id, wf.server_id, wf.parent_domain_id, wf.path, wf.active, wf.path FROM web_folder wf LEFT JOIN server se ON (se.server_id = wf.server_id) LEFT JOIN sys_user s on(wf.sys_groupid = s.default_group) LEFT JOIN web_domain wd ON (wd.domain_id = wf.parent_domain_id) LEFT JOIN web_folder_user wfu ON (wfu.web_folder_id = wf.web_folder_id) WHERE client_id = ?";
+                $all = $app->db->queryAllRecords($sql, $client_id);
+                return $all;
+        }
+
+	/** Get all protected folder user by user
+          * @author Frost
+          */
+        public function sites_protected_folder_users_get_all_by_user($session_id, $client_id)
+        {
+                global $app;
+                if(!$this->checkPerm($session_id, 'sites_ftp_user_get')) {
+                        throw new SoapFault('permission_denied', 'You do not have the permissions to access this function.');
+                        return false;
+                }
+                $client_id = $app->functions->intval($client_id);
+                $sql = "SELECT wd.domain, wf.path, wfu.web_folder_user_id, wfu.web_folder_id, wfu.username, wfu.active FROM web_folder_user wfu LEFT JOIN sys_user s on(wfu.sys_groupid = s.default_group) LEFT JOIN web_folder wf ON (wf.web_folder_id = wfu.web_folder_id) LEFT JOIN web_domain wd ON (wd.domain_id = wf.parent_domain_id) WHERE client_id = ?";
+                $all = $app->db->queryAllRecords($sql, $client_id);
+                return $all;
+        }
+
+        /** Get all shell user by user
+          * @author Frost
+          */
+        public function sites_shell_users_get_all_by_user($session_id, $client_id)
+        {
+                global $app;
+                if(!$this->checkPerm($session_id, 'sites_ftp_user_get')) {
+                        throw new SoapFault('permission_denied', 'You do not have the permissions to access this function.');
+                        return false;
+                }
+                $client_id = $app->functions->intval($client_id);
+                $sql = "SELECT se.server_name, wd.domain, su.shell_user_id, su.parent_domain_id, su.username, su.active FROM shell_user su LEFT JOIN sys_user s on(su.sys_groupid = s.default_group) LEFT JOIN web_domain wd ON (wd.domain_id = su.parent_domain_id) LEFT JOIN server se ON (se.server_id = su.server_id) WHERE client_id = ?";
+                $all = $app->db->queryAllRecords($sql, $client_id);
+                return $all;
+        }
+
+        /** Get all cronjob by user
+          * @author Frost
+          */
+        public function sites_cron_jobs_get_all_by_user($session_id, $client_id)
+        {
+                global $app;
+                if(!$this->checkPerm($session_id, 'sites_ftp_user_get')) {
+                        throw new SoapFault('permission_denied', 'You do not have the permissions to access this function.');
+                        return false;
+                }
+                $client_id = $app->functions->intval($client_id);
+                $sql = "SELECT se.server_name, wd.domain, c.id, c.parent_domain_id, c.type, c.command, c.run_min, c.run_hour, c.run_mday, c.run_month, c.run_wday, c.log, c.active FROM cron c LEFT JOIN sys_user s on(c.sys_groupid = s.default_group) LEFT JOIN web_domain wd ON (wd.domain_id = c.parent_domain_id) LEFT JOIN server se ON (se.server_id = c.server_id) WHERE client_id = ?";
+                $all = $app->db->queryAllRecords($sql, $client_id);
+                return $all;
+        }
+
 }
 
 ?>

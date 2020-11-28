@@ -311,7 +311,7 @@ class remoting_mail extends remoting {
 		return $affected_rows;
 	}
 	
-	// Mail backup list function by Dominik Müller, info@profi-webdesign.net
+	// Mail backup list function by Dominik M\FCller, info@profi-webdesign.net
 	public function mail_user_backup_list($session_id, $primary_id = null)
 	{
 		global $app;
@@ -334,7 +334,7 @@ class remoting_mail extends remoting {
 		return $result;
 	}
 	
-	// Mail backup restore/download functions by Dominik Müller, info@profi-webdesign.net
+	// Mail backup restore/download functions by Dominik M\FCller, info@profi-webdesign.net
 	public function mail_user_backup($session_id, $primary_id, $action_type)
 	{
 		global $app;
@@ -1104,6 +1104,151 @@ class remoting_mail extends remoting {
 		
 		return $app->quota_lib->get_mailquota_data($client_id, false);
 	}
+
+	/** Get all mail domain by user
+          * @author Frost
+          */
+        public function mail_domain_get_all_by_user($session_id, $client_id)
+        {
+                global $app;
+                if(!$this->checkPerm($session_id, 'mail_domain_get')) {
+                        throw new SoapFault('permission_denied', 'You do not have the permissions to access this function.');
+                        return false;
+                }
+                $client_id = $app->functions->intval($client_id);
+                $sql = "SELECT se.server_name, md.domain_id, md.domain, md.dkim, md.active  FROM mail_domain md LEFT JOIN sys_user s on(md.sys_groupid = s.default_group) LEFT JOIN server se ON (se.server_id = md.server_id) WHERE client_id = ?";
+                $all = $app->db->queryAllRecords($sql, $client_id);
+                return $all;
+        }
+
+	/** Get domain alias  by user
+          * @author Frost
+          */
+        public function mail_domain_alias($session_id, $client_id)
+        {
+                global $app;
+                if(!$this->checkPerm($session_id, 'mail_domain_get')) {
+                        throw new SoapFault('permission_denied', 'You do not have the permissions to access this function.');
+                        return false;
+                }
+                $client_id = $app->functions->intval($client_id);
+                $sql = "SELECT se.server_name, mf.forwarding_id, mf.server_id, mf.source, mf.destination, mf.active, mf.allow_send_as, mf.greylisting FROM mail_forwarding mf LEFT JOIN sys_user s on(mf.sys_groupid = s.default_group) LEFT JOIN server se ON (se.server_id = mf.server_id) WHERE client_id = ? AND mf.type = 'aliasdomain'";
+                $all = $app->db->queryAllRecords($sql, $client_id);
+                return $all;
+        }
+
+
+	/** Get mailbox by user
+          * @author Frost
+          */
+        public function mail_mailbox_get_all_by_user($session_id, $client_id)
+        {
+                global $app;
+                if(!$this->checkPerm($session_id, 'mail_domain_get')) {
+                        throw new SoapFault('permission_denied', 'You do not have the permissions to access this function.');
+                        return false;
+                }
+                $client_id = $app->functions->intval($client_id);
+                $sql = "SELECT se.server_name, mu.mailuser_id, mu.email, mu.name, mu.quota, mu.autoresponder, mu.disableimap, mu.disabledeliver,  mu.disablepop3, mu.disablesmtp, mu.backup_interval FROM mail_user mu LEFT JOIN sys_user s on(mu.sys_groupid = s.default_group) LEFT JOIN server se ON (se.server_id = mu.server_id) WHERE client_id = ?";
+                $all = $app->db->queryAllRecords($sql, $client_id);
+                return $all;
+        }
+
+	/** Get Email Alias by user
+          * @author Frost
+          */
+        public function mail_email_alias_get_all_by_user($session_id, $client_id)
+        {
+                global $app;
+                if(!$this->checkPerm($session_id, 'mail_domain_get')) {
+                        throw new SoapFault('permission_denied', 'You do not have the permissions to access this function.');
+                        return false;
+                }
+                $client_id = $app->functions->intval($client_id);
+                $sql = "SELECT se.server_name, mf.forwarding_id, mf.server_id, mf.source, mf.destination, mf.active, mf.allow_send_as, mf.greylisting FROM mail_forwarding mf LEFT JOIN sys_user s on(mf.sys_groupid = s.default_group) LEFT JOIN server se ON (se.server_id = mf.server_id) WHERE client_id = ? AND mf.type = 'alias'";
+                $all = $app->db->queryAllRecords($sql, $client_id);
+                return $all;
+        }
+
+	/** Get Email Forward by user
+          * @author Frost
+          */
+        public function mail_email_forward_get_all_by_user($session_id, $client_id)
+        {
+                global $app;
+                if(!$this->checkPerm($session_id, 'mail_domain_get')) {
+                        throw new SoapFault('permission_denied', 'You do not have the permissions to access this function.');
+                        return false;
+                }
+                $client_id = $app->functions->intval($client_id);
+                $sql = "SELECT se.server_name, mf.forwarding_id, mf.server_id, mf.source, mf.destination, mf.active, mf.allow_send_as, mf.greylisting FROM mail_forwarding mf LEFT JOIN sys_user s on(mf.sys_groupid = s.default_group) LEFT JOIN server se ON (se.server_id = mf.server_id) WHERE client_id = ? AND mf.type = 'forward'";
+                $all = $app->db->queryAllRecords($sql, $client_id);
+                return $all;
+        }
+
+	/** Get Email Catchall by user
+          * @author Frost
+          */
+        public function mail_email_catchall_get_all_by_user($session_id, $client_id)
+        {
+                global $app;
+                if(!$this->checkPerm($session_id, 'mail_domain_get')) {
+                        throw new SoapFault('permission_denied', 'You do not have the permissions to access this function.');
+                        return false;
+                }
+                $client_id = $app->functions->intval($client_id);
+                $sql = "SELECT se.server_name, mf.forwarding_id, mf.server_id, mf.source, mf.destination, mf.active, mf.allow_send_as, mf.greylisting FROM mail_forwarding mf LEFT JOIN sys_user s on(mf.sys_groupid = s.default_group) LEFT JOIN server se ON (se.server_id = mf.server_id) WHERE client_id = ? AND mf.type = 'catchall'";
+                $all = $app->db->queryAllRecords($sql, $client_id);
+                return $all;
+        }
+
+	/** Get Email Routing by user
+          * @author Frost
+          */
+        public function mail_email_routing_get_all_by_user($session_id, $client_id)
+        {
+                global $app;
+                if(!$this->checkPerm($session_id, 'mail_domain_get')) {
+                        throw new SoapFault('permission_denied', 'You do not have the permissions to access this function.');
+                        return false;
+                }
+                $client_id = $app->functions->intval($client_id);
+                $sql = "SELECT se.server_name, mt.transport_id, mt.server_id, mt.domain, mt.transport, mt.sort_order, mt.active FROM mail_transport mt LEFT JOIN sys_user s on(mt.sys_groupid = s.default_group) LEFT JOIN server se ON (se.server_id = mt.server_id) WHERE client_id = ?";
+                $all = $app->db->queryAllRecords($sql, $client_id);
+                return $all;
+        }
+        
+        /** Get mailing list by user
+          * @author Frost
+          */
+        public function mail_mailing_list_get_all_by_user($session_id, $client_id)
+        {
+                global $app;
+                if(!$this->checkPerm($session_id, 'mail_domain_get')) {
+                        throw new SoapFault('permission_denied', 'You do not have the permissions to access this function.');
+                        return false;
+                }
+                $client_id = $app->functions->intval($client_id);
+                $sql = "SELECT se.server_name, ml.mailinglist_id, ml.server_id, ml.domain, ml.listname, ml.email FROM mail_mailinglist ml LEFT JOIN sys_user s on(ml.sys_groupid = s.default_group) LEFT JOIN server se ON (se.server_id = ml.server_id) WHERE client_id = ?";
+                $all = $app->db->queryAllRecords($sql, $client_id);
+                return $all;
+        }
+
+	/** Get Email Fetchmail by user
+          * @author Frost
+          */
+        public function mail_email_fetchmail_get_all_by_user($session_id, $client_id)
+        {
+                global $app;
+                if(!$this->checkPerm($session_id, 'mail_domain_get')) {
+                        throw new SoapFault('permission_denied', 'You do not have the permissions to access this function.');
+                        return false;
+                }
+                $client_id = $app->functions->intval($client_id);
+                $sql = "SELECT se.server_name, mg.mailget_id, mg.type, mg.source_server, mg.source_username,mg.source_delete, mg.source_read_all, mg.destination, mg.active  FROM mail_get mg LEFT JOIN sys_user s on(mg.sys_groupid = s.default_group) LEFT JOIN server se ON (se.server_id = mg.server_id) WHERE client_id = ?";
+                $all = $app->db->queryAllRecords($sql, $client_id);
+                return $all;
+        }
 
 }
 
